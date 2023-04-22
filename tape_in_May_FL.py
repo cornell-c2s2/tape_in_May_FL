@@ -20,8 +20,7 @@ class TapeInMayFL:
         'SPI_packet_size_sel':       Bits32(5),
         'SPI_master_xbar_sel':       Bits32(6),
         'FFT_input_crossbar_inj':    Bits32(7), 
-        'SPI_master_xbar_inj':       Bits32(8),
-        'SPI_source':                Bits32(9)
+        'SPI_master_xbar_inj':       Bits32(8)
     }
 
     BIT_WIDTH    = 32
@@ -55,6 +54,7 @@ class TapeInMayFL:
         BIT_WIDTH = TapeInMayFL.BIT_WIDTH
         DECIMAL_PT = TapeInMayFL.DECIMAL_PT
         FFT_LRG_SIZE = TapeInMayFL.FFT_LRG_SIZE
+        FFT_SML_SIZE = TapeInMayFL.FFT_SML_SIZE
 
         LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS = TapeInMayFL.LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS
         ADDRESS_MAPPING = TapeInMayFL.ADDRESS_MAPPING
@@ -100,28 +100,24 @@ class TapeInMayFL:
             self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
-        
-        elif(address == ADDRESS_MAPPING['SPI_source']):
+            return [input_bits]      
+
+        elif(address == ADDRESS_MAPPING['FFT_input_crossbar_inj']):
             if(w_en):
                 self.source_buffer.append(msg)
                 self.source_state  = self.source_state + 1
 
+                #  if source received all message inputs, pass to the FFT
+            if (self.source_state == FFT_SML_SIZE):
+                self.source_state = 0
+                if(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 1 and self.FFT_output_Xbar_in_state == 1):
+                    return [msg]
+                elif(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 0 and self.FFT_output_Xbar_in_state == 0):
+                    return [fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_SML_SIZE, self.source_buffer)]
+
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return [input_bits]
-
-        elif(address == ADDRESS_MAPPING['FFT_input_crossbar_inj']):
-            if(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 1 and self.FFT_output_Xbar_in_state == 1):
-                return [msg]
-            elif(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 0 and self.FFT_output_Xbar_in_state == 0):
-                if(self.source_state == 8):
-                    self.source_state = 0
-                    return [fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_LRG_SIZE, self.source_buffer)]
-                else:
-                    # set ack signal to 1 for return
-                    input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-                    return [input_bits]
 
         elif(address == ADDRESS_MAPPING['SPI_master_xbar_inj']):
             # set ack signal to 1 for return
