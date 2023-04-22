@@ -12,15 +12,15 @@ import numpy as np
 
 class TapeInMayFL:
     ADDRESS_MAPPING = {
-        'Loopback':                  Bits32(0),
-        'FFT_input_XBar':            Bits32(1),
-        'FFT_output_XBar':           Bits32(2),
-        'SPI_master_frequency_sel':  Bits32(3),
-        'SPI_master_chip_sel':       Bits32(4),
-        'SPI_packet_size_sel':       Bits32(5),
-        'SPI_master_xbar_sel':       Bits32(6),
-        'FFT_input_crossbar_inj':    Bits32(7), 
-        'SPI_master_xbar_inj':       Bits32(8)
+        'Loopback':                  Bits4(0),
+        'FFT_input_XBar':            Bits4(1),
+        'FFT_output_XBar':           Bits4(2),
+        'SPI_master_frequency_sel':  Bits4(3),
+        'SPI_master_chip_sel':       Bits4(4),
+        'SPI_packet_size_sel':       Bits4(5),
+        'SPI_master_xbar_sel':       Bits4(6),
+        'FFT_input_crossbar_inj':    Bits4(7), 
+        'SPI_master_xbar_inj':       Bits4(8)
     }
 
     BIT_WIDTH    = 32
@@ -64,43 +64,45 @@ class TapeInMayFL:
         msg     = input_bits[:BIT_WIDTH] # [0:31]
 
         if(address == ADDRESS_MAPPING['Loopback']):
-            # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            # loopback just returns what is given
+            return input_bits
             
         elif(address == ADDRESS_MAPPING['FFT_input_XBar']):
-            self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
-            self.FFT_input_Xbar_out_state = msg[BIT_WIDTH - 2:BIT_WIDTH - 1]
+            if (w_en):
+                self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
+                self.FFT_input_Xbar_out_state = msg[BIT_WIDTH - 2:BIT_WIDTH - 1]
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            return input_bits
 
         elif(address == ADDRESS_MAPPING['FFT_output_XBar']):
-            self.FFT_output_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
+            if (w_en):
+                self.FFT_output_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            return input_bits
 
         elif(address == ADDRESS_MAPPING['SPI_master_frequency_sel']):
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            return input_bits
 
         elif(address == ADDRESS_MAPPING['SPI_master_chip_sel']):
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            return input_bits
 
         elif(address == ADDRESS_MAPPING['SPI_packet_size_sel']):
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            return input_bits
 
         elif(address == ADDRESS_MAPPING['SPI_master_xbar_sel']):
-            self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
+            if (w_en):
+                self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]      
+            return input_bits      
 
         elif(address == ADDRESS_MAPPING['FFT_input_crossbar_inj']):
             if(w_en):
@@ -111,18 +113,18 @@ class TapeInMayFL:
             if (self.source_state == FFT_SML_SIZE):
                 self.source_state = 0
                 if(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 1 and self.FFT_output_Xbar_in_state == 1):
-                    return [msg]
+                    return msg
                 elif(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 0 and self.FFT_output_Xbar_in_state == 0):
-                    return [fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_SML_SIZE, self.source_buffer)]
+                    return fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_SML_SIZE, self.source_buffer)
 
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            return input_bits
 
         elif(address == ADDRESS_MAPPING['SPI_master_xbar_inj']):
             # set ack signal to 1 for return
             input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return [input_bits]
+            return input_bits
 
 
 def fixed_point_fft(BIT_WIDTH, DECIMAL_PT, SIZE_FFT, x):
