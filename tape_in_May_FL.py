@@ -9,6 +9,7 @@ from pymtl3 import *
 from math import log2
 import math
 import numpy as np
+import copy
 
 class TapeInMayFL:
     ADDRESS_MAPPING = {
@@ -25,13 +26,12 @@ class TapeInMayFL:
 
     BIT_WIDTH    = 32
     DECIMAL_PT   = 16
-    FFT_LRG_SIZE = 256
-    FFT_SML_SIZE = 8
     MAXIMUM_ADDRESSIBLE_COMPONENTS = 16
     LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS = round(log2(MAXIMUM_ADDRESSIBLE_COMPONENTS))
 
 
-    def __init__(self):
+    def __init__(self, fft_size):
+        self.fft_size = fft_size
         self.FFT_input_XBar_in_state    = Bits32(0)
         self.FFT_input_XBar_out_state   = Bits32(0)
         self.FFT_output_XBar_in_state   = Bits32(0)
@@ -44,8 +44,6 @@ class TapeInMayFL:
 
         self.deserializer_buffer        = []
         self.source_buffer              = []
-
-        print("Tape-in May 2023 module initialized")
     
     #Takes a message you would send over SPI in the PyMTL bits Datatype
     #Returns an array of bits that designate the return type.
@@ -53,8 +51,7 @@ class TapeInMayFL:
 
         BIT_WIDTH = TapeInMayFL.BIT_WIDTH
         DECIMAL_PT = TapeInMayFL.DECIMAL_PT
-        FFT_LRG_SIZE = TapeInMayFL.FFT_LRG_SIZE
-        FFT_SML_SIZE = TapeInMayFL.FFT_SML_SIZE
+        FFT_SIZE = self.fft_size
 
         LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS = TapeInMayFL.LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS
         ADDRESS_MAPPING = TapeInMayFL.ADDRESS_MAPPING
@@ -65,67 +62,77 @@ class TapeInMayFL:
 
         if(address == ADDRESS_MAPPING['Loopback']):
             # loopback just returns what is given
-            return input_bits
+            resp = copy.deepcopy(input_bits)
+            return resp
             
         elif(address == ADDRESS_MAPPING['FFT_input_XBar']):
             if (w_en):
                 self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
                 self.FFT_input_Xbar_out_state = msg[BIT_WIDTH - 2:BIT_WIDTH - 1]
+
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp
 
         elif(address == ADDRESS_MAPPING['FFT_output_XBar']):
             if (w_en):
                 self.FFT_output_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp
 
         elif(address == ADDRESS_MAPPING['SPI_master_frequency_sel']):
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp
 
         elif(address == ADDRESS_MAPPING['SPI_master_chip_sel']):
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp
 
         elif(address == ADDRESS_MAPPING['SPI_packet_size_sel']):
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp
 
         elif(address == ADDRESS_MAPPING['SPI_master_xbar_sel']):
             if (w_en):
                 self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits      
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp     
 
         elif(address == ADDRESS_MAPPING['FFT_input_crossbar_inj']):
             if(w_en):
-                self.source_buffer.append(msg)
+                self.source_buffer.append(int(msg))
                 self.source_state  = self.source_state + 1
 
                 #  if source received all message inputs, pass to the FFT
-            if (self.source_state == FFT_SML_SIZE):
+                # the last one should still return resp instead of fft result?
+            if (self.source_state == FFT_SIZE):
                 self.source_state = 0
                 if(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 1 and self.FFT_output_Xbar_in_state == 1):
                     return msg
                 elif(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 0 and self.FFT_output_Xbar_in_state == 0):
-                    return fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_SML_SIZE, self.source_buffer)
+                    return fixed_point_fft(BIT_WIDTH=BIT_WIDTH, DECIMAL_PT=DECIMAL_PT, SIZE_FFT = FFT_SIZE, x = self.source_buffer)
 
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp
 
         elif(address == ADDRESS_MAPPING['SPI_master_xbar_inj']):
+            resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
-            input_bits[BIT_WIDTH:BIT_WIDTH + 1] = 1
-            return input_bits
-
+            resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
+            return resp
 
 def fixed_point_fft(BIT_WIDTH, DECIMAL_PT, SIZE_FFT, x):
     X_r = list(x)
