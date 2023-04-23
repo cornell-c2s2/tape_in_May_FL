@@ -121,7 +121,7 @@ class TapeInMayFL:
                 if(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 1 and self.FFT_output_Xbar_in_state == 1):
                     return msg
                 elif(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 0 and self.FFT_output_Xbar_in_state == 0):
-                    return fixed_point_fft(BIT_WIDTH=BIT_WIDTH, DECIMAL_PT=DECIMAL_PT, SIZE_FFT = FFT_SIZE, x = self.source_buffer)
+                    return fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_SIZE, self.source_buffer)
 
             resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return

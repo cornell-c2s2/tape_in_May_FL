@@ -3,9 +3,10 @@ from pymtl3 import *
 import math
 import numpy as np
 from tape_in_May_FL import *
-from command_generator import *
+from Command_generator import *
 
 BIT_WIDTH    = 32
+DECIMAL_PT   = 16
 
 def sample_fft_input_generate(fft_size):
     input_array = []
@@ -48,15 +49,20 @@ def test_minion_pass_fft_data():
         fft_output_xbar_from_fft
         ]
 
-    # create a list of 8 Bits32 fft numbers
+    # create a list of 8 Bits32 numbers for fft input
     arr = sample_fft_input_generate(8)
+
     # create 8 instructions to inject the numbers
     for num in arr:
         inst_arr.append(FFT_Input_Crossbar_Injection(num))
 
-    for i in inst_arr:
-        resp = May_FL.SPI_minion_input(i)
-        i[BIT_WIDTH:BIT_WIDTH + 1] = 1
+    for i in range(len(inst_arr)):
+        resp = May_FL.SPI_minion_input(inst_arr[i])
+        if (i != len(inst_arr) - 1): # the response of the last one will be the fft result
+            inst_arr[i][BIT_WIDTH:BIT_WIDTH + 1] = 1
+            assert(resp == inst_arr[i])
+        else:
+            assert(resp == fixed_point_fft(BIT_WIDTH, DECIMAL_PT, 8, arr))
     
     assert(May_FL.FFT_input_Xbar_in_state == 0)
     assert(May_FL.FFT_input_Xbar_out_state == 0)
