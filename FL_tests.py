@@ -70,9 +70,35 @@ def test_minion_pass_fft_data():
 
     print("minion-fft data test passed\n")
 
+def test_minion_bypass_fft_control():
+    May_FL = TapeInMayFL(8)
+
+    # set two xbars
+    fft_input_xbar_spi_minion_bypass_fft = FFT_Input_Crossbar_Control(0, 1)
+    fft_output_xbar_bypass_fft           = FFT_Output_Crossbar_Control(1)
+
+    inst_arr = [
+        fft_input_xbar_spi_minion_bypass_fft,
+        fft_output_xbar_bypass_fft
+        ]
+
+    for i in inst_arr:
+        resp = May_FL.SPI_minion_input(i)
+        i[BIT_WIDTH:BIT_WIDTH + 1] = 1
+        assert(resp == i)
+    
+    assert(May_FL.FFT_input_Xbar_in_state == 0)
+    assert(May_FL.FFT_input_Xbar_out_state == 1)
+    assert(May_FL.FFT_output_Xbar_in_state == 1)
+
+    print("minion-bypass-fft control test passed\n")
+
+    #TODO: also test w_en = 0
+
 def main():
     test_minion_pass_fft_control()
     test_minion_pass_fft_data()
+    test_minion_bypass_fft_control()
 
         
 if __name__ == "__main__":

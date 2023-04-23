@@ -42,7 +42,6 @@ class TapeInMayFL:
         self.SPI_master_Xbar_state      = Bits32(0)
         self.source_state               = Bits32(0)
 
-        self.deserializer_buffer        = []
         self.source_buffer              = []
     
     #Takes a message you would send over SPI in the PyMTL bits Datatype
@@ -115,11 +114,11 @@ class TapeInMayFL:
                 self.source_state  = self.source_state + 1
 
                 #  if source received all message inputs, pass to the FFT
-                # the last one should still return resp instead of fft result?
+                # TODO: the last one should still return resp instead of fft result?
             if (self.source_state == FFT_SIZE):
                 self.source_state = 0
                 if(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 1 and self.FFT_output_Xbar_in_state == 1):
-                    return msg
+                    return msg #TODO
                 elif(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 0 and self.FFT_output_Xbar_in_state == 0):
                     return fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_SIZE, self.source_buffer)
 

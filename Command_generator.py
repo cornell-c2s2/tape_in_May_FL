@@ -23,7 +23,7 @@ from pymtl3 import *
 #              32 bit configuration value
 def command_generator(addr, minion, freq, packet_size, microphone, master_input, fft, fft_input, master_inj):
     if (addr == 0):
-        return Bits36(1) # what should loopback input output?
+        return Bits37(1) # what should loopback input output?
     elif (addr == 1):
         return FFT_Input_Crossbar_Control(minion, fft)
     elif (addr == 2):
@@ -39,7 +39,7 @@ def command_generator(addr, minion, freq, packet_size, microphone, master_input,
     elif (addr == 7):
         return FFT_Input_Crossbar_Injection(fft_input)
     elif (addr == 8):
-        return SPI_Master_Crossbar_Injection(Bits32(master_inj))
+        return SPI_Master_Crossbar_Injection(master_inj)
 
 #--------------------------------------------------
 # 0x1 FFT_Input_Crossbar_Control
