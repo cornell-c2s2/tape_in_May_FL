@@ -38,6 +38,7 @@ def test_minion_pass_fft_control():
 
     print("minion-fft control test passed\n")
 
+#TODO: address different sources in this test case
 def test_minion_pass_fft_data():
     May_FL = TapeInMayFL(8)
     Comm_gen = CommandGenerator(8)
