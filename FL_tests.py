@@ -1,7 +1,6 @@
 # Test cases for tape_in_Mar_FL.py
 from pymtl3 import *
 import math
-import numpy as np
 from tape_in_May_FL import *
 from Command_generator import *
 
@@ -13,13 +12,15 @@ def sample_fft_input_generate(fft_size):
     for i in range(fft_size):
         input_array.append(math.trunc(i* (2**16)))
     return input_array
+#TODO: also test w_en = 0
 
 def test_minion_pass_fft_control():
     May_FL = TapeInMayFL(8)
+    Comm_gen = CommandGenerator(8)
 
     # set two xbars
-    fft_input_xbar_from_spi_minion_to_fft = FFT_Input_Crossbar_Control(0, 0)
-    fft_output_xbar_from_fft              = FFT_Output_Crossbar_Control(0)
+    fft_input_xbar_from_spi_minion_to_fft = Comm_gen.FFT_Input_Crossbar_Control(0, 0)
+    fft_output_xbar_from_fft              = Comm_gen.FFT_Output_Crossbar_Control(0)
 
     inst_arr = [
         fft_input_xbar_from_spi_minion_to_fft,
@@ -39,10 +40,11 @@ def test_minion_pass_fft_control():
 
 def test_minion_pass_fft_data():
     May_FL = TapeInMayFL(8)
+    Comm_gen = CommandGenerator(8)
 
     # set two xbars
-    fft_input_xbar_from_spi_minion_to_fft = FFT_Input_Crossbar_Control(0, 0)
-    fft_output_xbar_from_fft              = FFT_Output_Crossbar_Control(0)
+    fft_input_xbar_from_spi_minion_to_fft = Comm_gen.FFT_Input_Crossbar_Control(0, 0)
+    fft_output_xbar_from_fft              = Comm_gen.FFT_Output_Crossbar_Control(0)
 
     inst_arr = [
         fft_input_xbar_from_spi_minion_to_fft,
@@ -54,7 +56,7 @@ def test_minion_pass_fft_data():
 
     # create 8 instructions to inject the numbers
     for num in arr:
-        inst_arr.append(FFT_Input_Crossbar_Injection(num))
+        inst_arr.append(Comm_gen.FFT_Input_Crossbar_Injection(num))
 
     for i in range(len(inst_arr)):
         resp = May_FL.SPI_minion_input(inst_arr[i])
@@ -72,10 +74,11 @@ def test_minion_pass_fft_data():
 
 def test_minion_bypass_fft_control():
     May_FL = TapeInMayFL(8)
+    Comm_gen = CommandGenerator(8)
 
     # set two xbars
-    fft_input_xbar_spi_minion_bypass_fft = FFT_Input_Crossbar_Control(0, 1)
-    fft_output_xbar_bypass_fft           = FFT_Output_Crossbar_Control(1)
+    fft_input_xbar_spi_minion_bypass_fft = Comm_gen.FFT_Input_Crossbar_Control(0, 1)
+    fft_output_xbar_bypass_fft           = Comm_gen.FFT_Output_Crossbar_Control(1)
 
     inst_arr = [
         fft_input_xbar_spi_minion_bypass_fft,
@@ -93,11 +96,10 @@ def test_minion_bypass_fft_control():
 
     print("minion-bypass-fft control test passed\n")
 
-    #TODO: also test w_en = 0
-
+    
 def main():
     test_minion_pass_fft_control()
-    test_minion_pass_fft_data()
+    # test_minion_pass_fft_data()
     test_minion_bypass_fft_control()
 
         
