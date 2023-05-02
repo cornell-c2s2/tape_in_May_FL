@@ -22,14 +22,11 @@ class TapeInMayFL:
         'SPI_master_xbar_sel':       6,
         'FFT_input_crossbar_inj':    7,  # only called when sources are all filled
         'SPI_master_xbar_inj':       8
-        # from 9 to 9 + fft_size are sources
+        # from 9 to 9 + fft_size - 1 are sources
     }
 
     BIT_WIDTH    = 32
     DECIMAL_PT   = 16
-    # MAXIMUM_ADDRESSIBLE_COMPONENTS = 16 #TODO: needs to be parametrized
-    # LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS = round(log2(MAXIMUM_ADDRESSIBLE_COMPONENTS))
-
 
     def __init__(self, fft_size):
         self.fft_size = fft_size
@@ -43,8 +40,8 @@ class TapeInMayFL:
         self.SPI_master_Xbar_state      = Bits32(0)
         self.source_state               = Bits32(0)
         self.source_buffer              = [0] * fft_size
-        self.BitsN                      = mk_bits(round(log2(9 + fft_size)))
-        self.address_bitwidth           = round(log2(9 + fft_size))
+        self.BitsAddr                   = mk_bits(round(log2(9 + fft_size)) + 1)
+        self.address_bitwidth           = round(log2(9 + fft_size)) + 1
     
     #Takes a message you would send over SPI in the PyMTL bits Datatype
     #Returns an array of bits that designate the return type.
@@ -52,21 +49,18 @@ class TapeInMayFL:
 
         BIT_WIDTH = TapeInMayFL.BIT_WIDTH
         DECIMAL_PT = TapeInMayFL.DECIMAL_PT
-        FFT_SIZE = self.fft_size
-
-        LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS = self.address_bitwidth
         ADDRESS_MAPPING = TapeInMayFL.ADDRESS_MAPPING
 
         w_en    = input_bits[BIT_WIDTH:BIT_WIDTH + 1] # [32:33]
-        address = input_bits[BIT_WIDTH + 1:BIT_WIDTH + 1 + LOG2_MAXIMUM_ADDRESSIBLE_COMPONENTS] # [34:37]
+        address = input_bits[BIT_WIDTH + 1:BIT_WIDTH + 1 + self.address_bitwidth]
         msg     = input_bits[:BIT_WIDTH] # [0:31]
 
-        if(address == self.BitsN(ADDRESS_MAPPING['Loopback'])):
+        if(address == self.BitsAddr(ADDRESS_MAPPING['Loopback'])):
             # loopback just returns what is given
             resp = copy.deepcopy(input_bits)
             return resp
             
-        elif(address == self.BitsN(ADDRESS_MAPPING['FFT_input_XBar'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['FFT_input_XBar'])):
             if (int(w_en)):
                 self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
                 self.FFT_input_Xbar_out_state = msg[BIT_WIDTH - 2:BIT_WIDTH - 1]
@@ -76,7 +70,7 @@ class TapeInMayFL:
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return resp
 
-        elif(address == self.BitsN(ADDRESS_MAPPING['FFT_output_XBar'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['FFT_output_XBar'])):
             if (int(w_en)):
                 self.FFT_output_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
             resp = copy.deepcopy(input_bits)
@@ -84,25 +78,25 @@ class TapeInMayFL:
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return resp
 
-        elif(address == self.BitsN(ADDRESS_MAPPING['SPI_master_frequency_sel'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['SPI_master_frequency_sel'])):
             resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return resp
 
-        elif(address == self.BitsN(ADDRESS_MAPPING['SPI_master_chip_sel'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['SPI_master_chip_sel'])):
             resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return resp
 
-        elif(address == self.BitsN(ADDRESS_MAPPING['SPI_packet_size_sel'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['SPI_packet_size_sel'])):
             resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return resp
 
-        elif(address == self.BitsN(ADDRESS_MAPPING['SPI_master_xbar_sel'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['SPI_master_xbar_sel'])):
             if (int(w_en)):
                 self.FFT_input_Xbar_in_state  = msg[BIT_WIDTH - 1:BIT_WIDTH]
             resp = copy.deepcopy(input_bits)
@@ -110,21 +104,21 @@ class TapeInMayFL:
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return resp     
 
-        elif(address == self.BitsN(ADDRESS_MAPPING['FFT_input_crossbar_inj'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['FFT_input_crossbar_inj'])):
             #  if source received all message inputs, pass to the FFT
-            if (int(w_en) and self.source_state == FFT_SIZE):
+            if (int(w_en) and self.source_state == self.fft_size):
                 self.source_state = 0
                 if(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 1 and self.FFT_output_Xbar_in_state == 1):
                     return msg #TODO: only 32 bits, pad?
                 elif(self.FFT_input_Xbar_in_state == 0 and self.FFT_input_Xbar_out_state == 0 and self.FFT_output_Xbar_in_state == 0):
-                    return fixed_point_fft(BIT_WIDTH, DECIMAL_PT, FFT_SIZE, self.source_buffer)
+                    return fixed_point_fft(BIT_WIDTH, DECIMAL_PT, self.fft_size, self.source_buffer)
 
             resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1
             return resp
 
-        elif(address == self.BitsN(ADDRESS_MAPPING['SPI_master_xbar_inj'])):
+        elif(address == self.BitsAddr(ADDRESS_MAPPING['SPI_master_xbar_inj'])):
             resp = copy.deepcopy(input_bits)
             # set ack signal to 1 for return
             resp[BIT_WIDTH:BIT_WIDTH + 1] = 1

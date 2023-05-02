@@ -2,33 +2,18 @@ from pymtl3 import *
 from math import log2
 
 #-------------------------------------------------
-#Command generator
+# Command generator
 #-------------------------------------------------
 # input specifications:
 # addr: address mapping recorded in https://confluence.cornell.edu/display/c2s2/Address+Mapping
-# minion:      1 bit
-#              0 - SPI minion, 1 - SPI master
-# freq:        3 bits
-#              when choosing SPI master, master frequency
-# packet_size: 5 bits
-#              when choosing SPI master, master packet size
-# microphone:  1 bit
-#              0 - microphone, 1 - undefined
-# master_input:1 bit
-#              0 - SPI minion, 1 - Constant/continuous mode
-# fft:         1 bit
-#              0 - fft, 1 - bypass fft
-# fft_input:   32 bits
-#              32 bit fixed point integer with decimal point at 16 bits
-# master_inj:  32 bits
-#              32 bit configuration value
+
 
 class CommandGenerator:
     
     def __init__(self, fft_size):
         self.fft_size = fft_size
-        self.BitsN = mk_bits(round(log2(9 + fft_size)))
-        self.address_bitwidth = round(log2(9 + fft_size))
+        self.BitsAddr = mk_bits(round(log2(9 + fft_size)) + 1)
+        self.address_bitwidth = round(log2(9 + fft_size) + 1)
 
     #--------------------------------------------------
     # 0x1 FFT_Input_Crossbar_Control
@@ -39,8 +24,8 @@ class CommandGenerator:
     # input = 1 → SPI master
     # output = 0 → FFT
     # output = 1 → bypass FFT
-    def FFT_Input_Crossbar_Control(self, input, output):
-        msg = concat(self.BitsN(1), Bits1(1), Bits1(input), Bits1(output), Bits30(0))
+    def FFT_Input_Crossbar_Control(self, w_en, input, output):
+        msg = concat(self.BitsAddr(1), Bits1(w_en), Bits1(input), Bits1(output), Bits30(0))
         return msg
 
     #--------------------------------------------------
@@ -50,8 +35,8 @@ class CommandGenerator:
     #  input      DNC
     # input = 0 → FFT
     # input = 1 → Bypass FFT
-    def FFT_Output_Crossbar_Control(self, input):
-        msg = concat(self.BitsN(2), Bits1(1), Bits1(input), Bits31(0))
+    def FFT_Output_Crossbar_Control(self, w_en, input):
+        msg = concat(self.BitsAddr(2), Bits1(w_en), Bits1(input), Bits31(0))
         return msg
 
     #--------------------------------------------------
@@ -62,8 +47,8 @@ class CommandGenerator:
     # input = 000 → 1/2 clock speed
     # input = 001 → 1/4 clock speed
     # input = 010 → 1/8 clock speed
-    def SPI_Master_Frequency_Select(self, input):
-        msg = concat(self.BitsN(3), Bits1(1), Bits3(input), Bits29(0))
+    def SPI_Master_Frequency_Select(self, w_en, input):
+        msg = concat(self.BitsAddr(3), Bits1(w_en), Bits3(input), Bits29(0))
         return msg
 
     #--------------------------------------------------
@@ -73,8 +58,8 @@ class CommandGenerator:
     #  input     |DNC
     # input = 0 → mic
     # input = 1 → undefined
-    def SPI_Master_Chip_Select(self, input):
-        msg = concat(self.BitsN(4), Bits1(1), Bits1(input), Bits31(0))
+    def SPI_Master_Chip_Select(self, w_en, input):
+        msg = concat(self.BitsAddr(4), Bits1(w_en), Bits1(input), Bits31(0))
         return msg
 
     #--------------------------------------------------
@@ -87,8 +72,8 @@ class CommandGenerator:
     # input = 00010 → packet size = 3
     # ......
     # input = 11111 → packet size = 32
-    def SPI_Packet_Size_Select(self, input):
-        msg = concat(self.BitsN(5), Bits1(1), Bits5(input), Bits27(0))
+    def SPI_Packet_Size_Select(self, w_en, input):
+        msg = concat(self.BitsAddr(5), Bits1(w_en), Bits5(input), Bits27(0))
         return msg
 
     #--------------------------------------------------
@@ -98,22 +83,31 @@ class CommandGenerator:
     #  input     |DNC
     # input = 0 → SPI Minion
     # input = 1 → Constant/continuous mode
-    def SPI_Master_Crossbar_Select(self, input):
-        msg = concat(self.BitsN(6), Bits1(1), Bits1(input), Bits31(0))
+    def SPI_Master_Crossbar_Select(self, w_en, input):
+        msg = concat(self.BitsAddr(6), Bits1(w_en), Bits1(input), Bits31(0))
         return msg
 
     #--------------------------------------------------
     # 0x7 FFT_Input_Crossbar_Injection
     #--------------------------------------------------
     # Input = 32 bit fixed point integer with decimal point at 16 bits
-    def FFT_Input_Crossbar_Injection(self, input):
-        msg = concat(self.BitsN(7), Bits1(1), Bits32(input))
+    def FFT_Input_Crossbar_Injection(self, w_en):
+        msg = concat(self.BitsAddr(7), Bits1(w_en), Bits32(0))
         return msg
 
     #--------------------------------------------------
     # 0x8 SPI-Master-Crossbar-Injection
     #--------------------------------------------------
     # Input = 32 bit configuration value
-    def SPI_Master_Crossbar_Injection(self, input):
-        msg = concat(self.BitsN(8), Bits1(1), Bits32(input))
+    def SPI_Master_Crossbar_Injection(self, w_en, input):
+        msg = concat(self.BitsAddr(8), Bits1(w_en), Bits32(input))
+        return msg
+
+
+    #--------------------------------------------------
+    # from 9 to 9+fft_size-1: Source-Injection
+    #--------------------------------------------------
+    # source num = 0 to fft_size - 1
+    def Source_Injection(self, w_en, source_num, input):
+        msg = concat(self.BitsAddr(source_num+9), Bits1(w_en), Bits32(input))
         return msg
